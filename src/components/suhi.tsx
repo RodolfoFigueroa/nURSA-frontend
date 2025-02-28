@@ -1,6 +1,6 @@
 import { BitmapLayer } from 'deck.gl';
-import DeckGL from '@deck.gl/react';
-import { Map } from "react-map-gl/maplibre";
+import { useEffect, useState } from 'react';
+import { LoadingMap } from './common';
 
 
 interface SUHIMapProps {
@@ -10,56 +10,102 @@ interface SUHIMapProps {
     ymax: number;
     year: number;
     season: string;
+    cat_active: boolean;
 }
 
-function SUHIMap(props: SUHIMapProps){
-    const response_json = fetch(
-        "http://localhost:8000/suhi/plot",
+
+interface ImageData {
+    width: number;
+    height: number;
+    data: Uint8Array;
+    bounds: Array<number>;
+}
+
+
+async function fetch_image(url: string, xmin: number, ymin: number, xmax: number, ymax: number, year: number, season: string) {
+    return await fetch(
+        url,
         {
             method: "POST",
             body: JSON.stringify({
-                xmin: props.xmin,
-                ymin: props.ymin,
-                xmax: props.xmax,
-                ymax: props.ymax,
-                year: props.year,
-                season: props.season
+                xmin: xmin,
+                ymin: ymin,
+                xmax: xmax,
+                ymax: ymax,
+                year: year,
+                season: season
             }),
             headers: {
                 "Content-Type": "application/json"
             }
         }
-    ).then(response => response.json())
-
-    const image_data = response_json.then(function(x) {
-        return {
-            width: x["width"],
-            height: x["height"],
-            data: new Uint8Array(x["data"])
+    )
+    .then(response => response.json())
+    .then(function(response_json) {
+        const out: ImageData = {
+            width: response_json["width"],
+            height: response_json["height"],
+            data: new Uint8Array(response_json["data"]),
+            bounds: response_json["bounds"],
         }
+        return out;
     })
+}
 
+
+async function fetch_images(urls: Array<string>, xmin: number, ymin: number, xmax: number, ymax: number, year: number, season: string) {
+    return await Promise.all(urls.map(url => fetch_image(url, xmin, ymin, xmax, ymax, year, season)))
+}
+
+
+function SUHIMap(props: SUHIMapProps){
+    const [is_loading, set_is_loading] = useState(false);
+    const [image_data, set_image_data] = useState({});
+    const [cat_image_data, set_cat_image_data] = useState({});
+
+    useEffect(() => {
+        set_is_loading(true);
+        (
+            fetch_images(
+                [
+                    "http://localhost:8000/suhi/maps/continuous", 
+                    "http://localhost:8000/suhi/maps/categorical"
+                ],
+                props.xmin,
+                props.ymin,
+                props.xmax,
+                props.ymax,
+                props.year,
+                props.season
+            )
+            .then(two_data => {
+                set_image_data(two_data[0]);
+                set_cat_image_data(two_data[1]);
+                set_is_loading(false);
+            })
+        )
+    }, []);
     
     const layers = [
         new BitmapLayer({
             id: "BitmapLayer",
             bounds: [props.xmin, props.ymin, props.xmax, props.ymax],
             image: image_data,
-            opacity: 0.4
+            opacity: 0.4,
+            visible: !props.cat_active,
         }),
+        new BitmapLayer({
+            id: "BitmapLayer",
+            bounds: [props.xmin, props.ymin, props.xmax, props.ymax],
+            image: cat_image_data,
+            opacity: 0.4,
+            visible: props.cat_active,
+        }),
+
     ]
 
-    return <DeckGL
-        initialViewState={{
-            longitude: (props.xmin + props.xmax) / 2,
-            latitude: (props.ymin + props.ymax) / 2,
-            zoom: 9
-        }}
-        controller
-        layers={layers}
-    >
-        <Map mapStyle="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json/" />;
-    </DeckGL>
+    return <LoadingMap is_loading={is_loading} lon={(props.xmin + props.xmax) / 2} lat={(props.ymin + props.ymax) / 2} layers={layers} />
+    
 }
 
 export default SUHIMap;

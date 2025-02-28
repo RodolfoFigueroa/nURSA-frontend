@@ -1,12 +1,16 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
-import { StrictMode } from 'react'
+import { BrowserRouter, Route, Routes} from 'react-router';
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import App from './App.tsx'      
+import App from './app/app.tsx'
+import SUHIPage from './app/routes/suhi.tsx';
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+    <BrowserRouter>
+        <Routes>
+            <Route path="/suhi" element={<SUHIPage />} />
+        </Routes>
+    </BrowserRouter>
 )
