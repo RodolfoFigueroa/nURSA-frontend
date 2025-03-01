@@ -8,19 +8,23 @@ import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
-import Spinner from "react-bootstrap/Spinner";
 
 import MyNavbar from "./navbar";
+import { Spinner } from "react-bootstrap";
 
 
-interface LoadingMapProps {
+interface MyMapProps {
     is_loading: boolean;
     lon: number;
     lat: number;
     layers: Array<Layer>;
-    legend: ReactElement;
 }
 
+
+interface LoadingMapLegendProps extends MyMapProps {
+    legend: ReactElement;
+    title: string;
+}
 
 interface MapTabsContainerProps {
     map: ReactElement;
@@ -28,24 +32,28 @@ interface MapTabsContainerProps {
 }
 
 
-interface ContinuousLegendProps {
-    vmin: number;
-    vmax: number;
-    vcenter: number;
+interface Category {
+    color: string;
+    label: string;
 }
 
 
-function CategoricalLegend() {
-    return <div className="d-flex flex-wrap justify-content-between">
-        {[
-            { color: "#0000FF", label: "Muy frío" }, 
-            { color: "#0055FF", label: "Frío" },
-            { color: "#00AAFF", label: "Ligeramente frío" },
-            { color: "#00FF55", label: "Templado" },
-            { color: "#FFFF00", label: "Ligeramente caliente" },
-            { color: "#FF5500", label: "Caliente" },
-            { color: "#FF0000", label: "Muy caliente" }
-        ].map((item, index) => (
+interface ContinuousLegendProps {
+    colors: Array<string>;
+    vmin: number | string;
+    vmax: number | string;
+    vcenter: number | string;
+}
+
+
+interface CategoricalLegendProps {
+    categories: Array<Category>;
+}
+
+
+function CategoricalLegend(props: CategoricalLegendProps) {
+    return <div className="d-flex flex-wrap justify-content-between w-100">
+        {props.categories.map((item, index) => (
             <div key={index} className="d-flex align-items-center me-3">
                 <span
                     style={{
@@ -55,7 +63,10 @@ function CategoricalLegend() {
                         display: "inline-block",
                         marginRight: "8px",
                         borderRadius: "3px",
-                        verticalAlign: "middle"
+                        verticalAlign: "middle",
+                        borderColor: "gray",
+                        borderStyle: "solid",
+                        borderWidth: "1px"
                     }}
                 ></span>
                 <span className="d-flex align-middle">{item.label}</span>
@@ -66,48 +77,64 @@ function CategoricalLegend() {
 
 
 function ContinuousLegend(props: ContinuousLegendProps) {
-    return <div className="d-flex flex-column align-items-center">
+    return <div className="d-flex flex-column align-items-center w-100">
         <div
             style={{
                 width: "100%",
                 height: "20px",
-                background: "linear-gradient(to right, red, blue)",
+                background: `linear-gradient(to right, ${props.colors.toString()})`,
                 borderRadius: "5px",
                 position: "relative"
             }}
-        ></div>
+        >
+            <span
+                style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    marginTop: "5px"
+                }}
+            >
+                {props.vcenter}
+            </span>
+        </div>
 
         <div className="d-flex justify-content-between w-100 mt-1">
-            <span>{props.vmin}</span>
-            <span>{props.vcenter}</span>
-            <span>{props.vmax}</span>
+            <span>{"<"}{props.vmin}</span>
+            <span>{">"}{props.vmax}</span>
         </div>
     </div>
 }
 
 
-function LoadingMap(props: LoadingMapProps) {
-    if (props.is_loading) {
-        return <Spinner animation="border" />;
-    } else {
-        return <div className="d-flex flex-column h-100 w-100">
-            <div className="flex-grow-1 position-relative">
-                <DeckGL
-                    initialViewState={{
-                        longitude: props.lon,
-                        latitude: props.lat,
-                        zoom: 9
-                    }}
-                    controller
-                    layers={props.layers}
-                >
-                    <Map mapStyle="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json/" />
-                </DeckGL>
-            </div>
+function MyMap(props: MyMapProps) {
+    return <div className="flex-grow-1 position-relative">
+        <DeckGL
+            initialViewState={{
+                longitude: props.lon,
+                latitude: props.lat,
+                zoom: 9
+            }}
+            controller
+            layers={props.layers}
+        >
+            <Map mapStyle="https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json/" />
+        </DeckGL>
+    </div>
+}
 
-            <Card className="mt-2 p-2">
-                <Card.Body>
-                
+
+function LoadingMapWithLegend(props: LoadingMapLegendProps) {
+    if (props.is_loading) {
+        return <Spinner />
+    } else{
+        return <div className="d-flex flex-column h-100 w-100">
+            <MyMap is_loading={props.is_loading} lon={props.lon} lat={props.lat} layers={props.layers} />
+            <Card className="mt-2 p-2 legend-card">
+                <div className="fw-bold">{props.title}</div>
+                <Card.Body className="w-100 d-flex align-items-center">
+                    {props.legend}
                 </Card.Body>
             </Card>
         </div>
@@ -131,4 +158,5 @@ function MapTabsContainer(props: MapTabsContainerProps) {
     </Container>
 }
 
-export { ContinuousLegend, CategoricalLegend, LoadingMap, MapTabsContainer };
+export { ContinuousLegend, CategoricalLegend, LoadingMapWithLegend, MapTabsContainer };
+export type {ContinuousLegendProps} ;

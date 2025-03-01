@@ -33,7 +33,7 @@ function SUHIPage(props: SUHIPageProps) {
         <div className="position-relative h-75 d-flex justify-content-center align-items-center my-2">
             <SUHIMap xmin={-100.64014632} ymin={25.34400857} xmax={-99.92226795} ymax={25.99488806} year={2023} season="Qall" cat_active={cat_active}/>
         </div>
-        <div className="h-25 my-2">
+        <div className="d-flex flex-grow my-2">
             <ButtonGroup>
                 <ToggleButton
                     id="btn-cont"
